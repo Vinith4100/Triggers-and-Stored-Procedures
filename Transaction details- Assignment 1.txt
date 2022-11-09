@@ -1,0 +1,54 @@
+create table account1(acc_number numeric(15) primary key,customer_name varchar(20) not null,
+Balance int not null);
+
+create table credit_Transaction(acc_number numeric(15) not null,transaction_type varchar(20) not null,
+changed_at timestamp ,previous_amount int not null,updated_amount int not null);
+
+create table debit_Transaction(acc_number numeric(15) not null,transaction_type varchar(20) not null,
+changed_at timestamp ,previous_amount int not null,updated_amount int not null)
+
+delimiter $$
+create trigger withdraw before update on account1 for each row
+begin
+ if(new.Balance<old.Balance)Then insert into  debit_transaction(acc_number,transaction_type,changed_at,previous_amount,updated_amount)
+values(old.acc_number,'Debit',now(),old.Balance,new.Balance);
+end if;
+end $$
+
+delimiter $$
+create trigger deposit before update on account1 for each row
+begin
+ if(new.Balance>old.Balance)Then insert into  credit_transaction(acc_number,transaction_type,changed_at,previous_amount,updated_amount)
+values(old.acc_number,'Credit',now(),old.Balance,new.Balance);
+end if;
+end $$
+
+
+drop trigger withdraw;
+drop trigger deposit;
+
+update account1 set balance=balance+2000 ;
+update account1 set balance=balance-1000 ;
+update account1 set balance=balance+2000 ;
+update account1 set balance=balance-4000 ;
+
+
+
+delimiter $$
+create procedure credited_amount(in time1 timestamp,in time2 timestamp)
+begin
+Select sum(updated_amount-previous_amount) from credit_transaction where (changed_at between time1 and time2);
+end $$
+
+delimiter $$
+create procedure debited_amount(in time1 timestamp,in time2 timestamp)
+begin
+select sum(previous_amount-updated_amount) from debit_transaction where changed_at>=time1 and changed_at<=time;
+end;
+
+
+call debited_amount('2022-11-09 08:04:31','2022-11-09 09:04:31');
+call credited_amount('2022-11-09 08:04:31','2022-11-09 09:04:31');
+
+drop procedure credited_amount;
+drop procedure debited_amount;
